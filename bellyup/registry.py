@@ -22,6 +22,7 @@ from surplus_reports.csv, which keeps a copy of the identity fields.
 from __future__ import annotations
 
 import csv
+import json
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +31,7 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "dataset"
 BUSINESSES = DATA_DIR / "businesses.csv"
 REPORTS = DATA_DIR / "surplus_reports.csv"
 OPTOUTS = DATA_DIR / "opted_out_businesses.csv"
+SEQ_FILE = Path(__file__).resolve().parent / "data" / "id_seq.json"
 
 # the nine columns of businesses.csv, in order -- do not add to these
 BUSINESS_COLUMNS = ["business_name", "facility_type", "address", "lon", "lat",
@@ -215,18 +217,43 @@ def optout_count() -> int:
 
 
 def next_id() -> str:
-    """The id the board WILL give the next self-registered restaurant.
+    """Allocate a new, PERMANENT self-registered supplier id.
 
-    This has to agree with demo_data.load_suppliers, which numbers the
-    self-registered rows positionally -- R100 + index in businesses.csv order
-    -- and not from this file at all. Reading surplus_reports.csv instead made
-    the two disagree the moment a restaurant registered without leaving a row
-    here: register() handed back R100 while the board called the new arrival
-    R103, so the UI's `pickRestaurant(supplier.id)` selected whoever really
-    held R100 and reported "kim has not reported surplus tonight" at someone
-    who had just signed up. Same basis, same answer.
+    Used to be `R100 + count of self-registered rows` -- fine until a
+    restaurant is deleted. Deleting one shrinks that count, so the very
+    next registration is handed the id of whoever was just removed --
+    including that id's ledger history. A confirmed delivery, an accepted
+    claim, a pending request are all keyed by id, not name, so the new
+    restaurant inherited a stranger's "delivered" status the instant it
+    registered. This is why: a restaurant reports, gets matched, and the
+    business panel shows it as already delivered before anyone touched it.
 
-    Called BEFORE the new row is appended, so the count of existing
-    self-registered rows IS the new row's index.
+    Backed by a counter file instead, so an id is never handed out twice
+    regardless of what gets deleted in between. demo_data.load_suppliers
+    reads the same id back by name (registry.supplier_ids()) rather than
+    recomputing a row position, so the two still never disagree on what a
+    self-registered restaurant is called -- they just agree on a stored
+    fact now instead of a shared formula.
     """
-    return f"R{100 + sum(1 for r in _read(BUSINESSES) if is_self_registered(r))}"
+    with _lock:
+        try:
+            seq = json.loads(SEQ_FILE.read_text())["next"]
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            # first run on this checkout: pick up where the old row-count
+            # scheme would have, so it doesn't collide with rows already here
+            seq = 100 + sum(1 for r in _read(BUSINESSES) if is_self_registered(r))
+        SEQ_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SEQ_FILE.write_text(json.dumps({"next": seq + 1}))
+        return f"R{seq}"
+
+
+def supplier_ids() -> dict[str, str]:
+    """business_name -> its permanent supplier id, from surplus_reports.csv.
+
+    Saved once, at registration (register_supplier always calls
+    save_report right after next_id()), and read back here instead of
+    recomputed -- see next_id()'s docstring for why recomputing it broke.
+    """
+    with _lock:
+        return {r["business_name"]: r["supplier_id"]
+                for r in _read(REPORTS) if r.get("supplier_id")}

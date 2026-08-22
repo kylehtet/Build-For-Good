@@ -165,6 +165,12 @@
     "lon": -117.144208,
     "matched": "2001 NEWTON AVE, SAN DIEGO, CA, 92113"
   },
+  "2305 india st, san diego": {
+    "lat": 32.728434,
+    "lon": -117.170255,
+    "matched": "2305 INDIA ST, SAN DIEGO, CA, 92101",
+    "source": "census"
+  },
   "2305 india st, san diego, ca": {
     "lat": 32.728434,
     "lon": -117.170255,

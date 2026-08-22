@@ -13,3 +13,4 @@ __pycache__/
 
 # Runtime state the app writes and recreates on demand
 dataset/surplus_reports.csv
+bellyup/data/id_seq.json

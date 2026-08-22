@@ -447,9 +447,13 @@ def load_suppliers(hotspots=None) -> list[dict]:
     out.sort(key=lambda s: (s["report"] is None, s["report"]["time"] if s["report"] else ""))
 
     own = []
+    persisted_ids = registry.supplier_ids()
     for n, b in enumerate(mine):
+        # prefer the id saved at registration -- see registry.next_id() for
+        # why recomputing this from row position lets a deleted restaurant's
+        # id (and its ledger history) land on whoever registers next
         own.append({
-            "id": f"R{100 + n}",
+            "id": persisted_ids.get(b["business_name"]) or f"R{100 + n}",
             "name": b["business_name"],
             "type": b["facility_type"] or "restaurant",
             "address": b["address"],
