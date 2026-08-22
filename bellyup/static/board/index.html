@@ -150,18 +150,24 @@
   <section class="map-wrap">
     <div id="map"></div>
 
-    <div class="map-legend">
-      <div class="lg-row"><span class="lg-hotspot"></span> Only significant clusters shown (Gi*, p&lt;0.05) &middot; size = need</div>
-      <div class="lg-row"><span class="lg-hotspot lg-cluster lg-emerging"></span> Emerging cluster &middot; growing (predicted from trend)</div>
-      <div class="lg-row"><span class="lg-hotspot lg-cluster lg-cooling"></span> Cooling cluster &middot; declining from its peak</div>
-      <div class="lg-row"><span class="lg-hotspot lg-cluster lg-new"></span> "Show predicted changes": dashed orange = new cluster predicted; larger dashed blue ring = predicted to fade</div>
-      <div class="lg-row"><span class="lg-hotspot lg-served"></span> Hotspot served tonight (at limit)</div>
-      <div class="lg-row"><span class="lg-supplier"></span> Supplier reporting surplus</div>
-      <div class="lg-row"><span class="lg-supplier lg-quiet"></span> Supplier, quiet tonight</div>
-      <div class="lg-row"><span class="lg-agency"></span> Agency HQ (collects &amp; distributes)</div>
-      <div class="lg-row"><span class="lg-dropoff"></span> Fixed drop-off site (receives only)</div>
-      <div class="lg-row"><span class="lg-pantry"></span> Mobile pantry &middot; unit available tonight</div>
-      <div class="lg-row"><span class="lg-pantry lg-pantry-idle"></span> Mobile pantry &middot; no unit tonight</div>
+    <div class="map-legend" id="mapLegend">
+      <button class="legend-toggle" id="legendToggle" aria-expanded="true">
+        <span class="legend-toggle-label">Legend</span>
+        <svg class="legend-toggle-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </button>
+      <div class="legend-body" id="legendBody">
+        <div class="lg-row"><span class="lg-hotspot"></span> Only significant clusters shown (Gi*, p&lt;0.05) &middot; size = need</div>
+        <div class="lg-row"><span class="lg-hotspot lg-cluster lg-emerging"></span> Emerging cluster &middot; growing (predicted from trend)</div>
+        <div class="lg-row"><span class="lg-hotspot lg-cluster lg-cooling"></span> Cooling cluster &middot; declining from its peak</div>
+        <div class="lg-row"><span class="lg-hotspot lg-cluster lg-new"></span> "Show predicted changes": dashed orange = new cluster predicted; larger dashed blue ring = predicted to fade</div>
+        <div class="lg-row"><span class="lg-hotspot lg-served"></span> Hotspot served tonight (at limit)</div>
+        <div class="lg-row"><span class="lg-supplier"></span> Supplier reporting surplus</div>
+        <div class="lg-row"><span class="lg-supplier lg-quiet"></span> Supplier, quiet tonight</div>
+        <div class="lg-row"><span class="lg-agency"></span> Agency HQ (collects &amp; distributes)</div>
+        <div class="lg-row"><span class="lg-dropoff"></span> Fixed drop-off site (receives only)</div>
+        <div class="lg-row"><span class="lg-pantry"></span> Mobile pantry &middot; unit available tonight</div>
+        <div class="lg-row"><span class="lg-pantry lg-pantry-idle"></span> Mobile pantry &middot; no unit tonight</div>
+      </div>
     </div>
 
     <div class="calc-overlay" id="calcOverlay">

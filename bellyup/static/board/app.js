@@ -1107,6 +1107,20 @@ $("themeBtn").addEventListener("click", () => {
   });
 });
 
+/* ------------------------------------------------------ map legend toggle */
+/* Starts collapsed on phones, where its 11 rows would otherwise eat more
+   than half the map; starts expanded everywhere else, matching how it's
+   always behaved on desktop. */
+(() => {
+  const legend = $("mapLegend"), toggle = $("legendToggle");
+  const setCollapsed = collapsed => {
+    legend.classList.toggle("collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+  };
+  setCollapsed(window.matchMedia("(max-width: 700px)").matches);
+  toggle.addEventListener("click", () => setCollapsed(!legend.classList.contains("collapsed")));
+})();
+
 /* ============================================ report in / update / boot */
 /* The form does two jobs. A restaurant not yet on the platform registers and
    reports in one step; one already on it revises TONIGHT's numbers. Surplus

@@ -228,7 +228,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 11.5px;
   color: var(--ink-2);
   backdrop-filter: blur(4px);
+  max-width: calc(100vw - 28px);
 }
+.legend-toggle { display: none; }
 .lg-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
 .lg-hotspot {
   width: 13px; height: 13px; border-radius: 50%;
@@ -1333,6 +1335,21 @@ body.ledger-open { overflow: hidden; }
   .roleswitch button { flex: 1; text-align: center; padding: 8px 6px; }
   .btn-label { display: none; }
   .btn-ledger { padding: 8px 10px; }
+
+  /* The legend's 11 rows at full size ate more than half the map's already-
+     short 54vh on a phone. Collapsed to a small "Legend" pill by default;
+     tapping it expands the full list over the map instead of permanently
+     stealing the space. */
+  .map-legend { padding: 7px 10px; }
+  .legend-toggle {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; background: none; border: none; padding: 3px 1px;
+    font: 600 11.5px/1 inherit; color: var(--ink); cursor: pointer;
+  }
+  .legend-toggle-ic { flex: none; transition: transform .15s; }
+  .map-legend.collapsed .legend-toggle-ic { transform: rotate(180deg); }
+  .legend-body { margin-top: 8px; max-height: 38vh; overflow-y: auto; }
+  .map-legend.collapsed .legend-body { display: none; margin-top: 0; }
 
   /* "Reset tonight" / "Close" wrap mid-word beside a title at this width --
      giving the actions their own full-width row below reads better than
