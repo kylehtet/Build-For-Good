@@ -96,8 +96,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 
 .stat-chip .v {
-  font-family: var(--font-heading);
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
@@ -187,8 +187,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .rc-time { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rc-mid { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .rc-lbs {
-  font-family: var(--font-heading);
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: 15px;
   color: var(--c-supplier-hi);
   font-variant-numeric: tabular-nums;
@@ -519,7 +519,7 @@ span.type-badge {
   text-align: center;
 }
 .oc .v {
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
   font-weight: 700;
   font-size: 19px;
   font-variant-numeric: tabular-nums;
@@ -1298,7 +1298,7 @@ body.ledger-open { overflow: hidden; }
 /* two figures, inline -- the detail lives in the panel where there is room */
 .topstats { display: flex; align-items: center; gap: 16px; margin-right: 4px; }
 .stat-chip { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
-.stat-chip .v { font: 600 13.5px/1 var(--font-brand); color: var(--ink); }
+.stat-chip .v { font: 700 13.5px/1 var(--font-body); color: var(--ink); }
 .stat-chip .k {
   font: 500 10.5px/1 var(--font-ui); color: var(--muted);
   text-transform: uppercase; letter-spacing: .06em;
