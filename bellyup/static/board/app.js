@@ -2254,14 +2254,18 @@ async function renderPantries() {
     radius: 6, color: themeColor("--c-supplier"), weight: 3,
     fillOpacity: .9, interactive: false }));
 
-  /* the way to whichever pantry is selected, so it is obvious where to walk */
+  /* the way to whichever pantry is selected, so it is obvious where to walk --
+     same real-street upgrade the agency view's routes get, since a straight
+     line across three blocks is exactly as misleading for someone walking as
+     it is for a delivery van. */
   if (picked) {
-    fxLayer.addLayer(L.polyline([[myPlace.lat, myPlace.lon], [picked.lat, picked.lon]], {
+    const pts = [[myPlace.lat, myPlace.lon], [picked.lat, picked.lon]];
+    const line = L.polyline(pts, {
       color: themeColor("--c-route"), bellyRole: "--c-route",
-      weight: 3.5, opacity: .95, className: "route-leg2", interactive: false }));
-    map.flyToBounds(L.latLngBounds(
-      [[myPlace.lat, myPlace.lon], [picked.lat, picked.lon]]).pad(0.45),
-      { duration: 0.7 });
+      weight: 3.5, opacity: .95, className: "route-leg2", interactive: false });
+    fxLayer.addLayer(line);
+    upgradeRouteGeometry(line, pts);
+    map.flyToBounds(L.latLngBounds(pts).pad(0.45), { duration: 0.7 });
   }
   renderStats();
 }
