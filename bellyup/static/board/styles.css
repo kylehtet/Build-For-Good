@@ -292,6 +292,27 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-agency) 50%, transparent);
   display: grid; place-items: center;
   color: #fff;
+  position: relative;
+}
+/* A pending pickup request is waiting on this collector -- red, not any
+   other status colour on the board, so it reads as "needs a human" at a
+   glance rather than blending into the agency/route/hotspot palette. */
+.req-pending-dot {
+  position: absolute; top: -4px; right: -4px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #e03b3b; border: 2px solid var(--marker-ring);
+  animation: req-pulse 1.6s ease-in-out infinite;
+}
+@keyframes req-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,59,59,.55); }
+  50% { box-shadow: 0 0 0 4px rgba(224,59,59,0); }
+}
+.req-pending-badge {
+  margin-left: auto;
+  background: #e03b3b; color: #fff;
+  font-size: 10.5px; font-weight: 700;
+  padding: 2px 7px; border-radius: 999px;
+  white-space: nowrap;
 }
 .mk-agency svg { width: 15px; height: 15px; display: block; }
 .mk-agency.winner {
@@ -444,6 +465,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: grid; place-items: center;
   flex-shrink: 0;
   font-size: 15px;
+}
+.pn-badge.type-badge { font-size: 11px; font-weight: 700; letter-spacing: .3px; }
+/* A short text code instead of an emoji for business/hotspot type --
+   compact, theme-coloured, doesn't need a pictograph to read at a glance. */
+span.type-badge {
+  display: inline-block;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .4px;
+  color: var(--muted); background: var(--surface-3);
+  padding: 2px 5px; border-radius: 4px;
+  vertical-align: middle;
 }
 .pn-agency .pn-badge { background: color-mix(in srgb, var(--c-agency) 16%, transparent); color: var(--c-agency); }
 .pn-pantryunit .pn-badge { background: color-mix(in srgb, var(--c-pantry) 16%, transparent); color: var(--c-pantry); }
@@ -657,6 +688,7 @@ details.model[open] summary { color: var(--ink-2); }
 .lt .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
 .lt.lt-good .v { color: var(--good); }
 .lt.lt-route .v { color: var(--c-route); }
+.lt.lt-warn .v { color: #e03b3b; }
 
 .ledger-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 26px; }
 .ledger-col h3 {
@@ -763,6 +795,113 @@ details.model[open] summary { color: var(--ink-2); }
 .sr-bar span { display: block; height: 100%; border-radius: 3px; background: var(--c-route); }
 .served-empty { color: var(--muted); font-size: 12px; padding: 8px 2px; }
 
+/* ===================== operations dashboard, deliberately not the ledger ===
+   The ledger is a dense two-column record -- a log and a receipt table,
+   read line by line, after the fact. The dashboard answers a different
+   question -- "where do I look tonight" -- so it gets its own shape: one
+   stacked column, color-coded KPI cards, a single horizontal flow instead
+   of five stacked bars, and top-3 movers with a bar instead of a number
+   table, rather than the ledger's card-and-grid reused with new labels. */
+.opsboard {
+  position: fixed; inset: 0; z-index: 2000;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.opsboard-inner {
+  max-width: 860px;
+  margin: 40px auto 60px;
+  padding: 0 4px;
+  animation: panel-in .25s ease;
+}
+.opsboard-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+.opsboard-head h2 { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 24px; }
+.opsboard-sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; max-width: 48ch; }
+.opsboard-head .btn-ghost { margin-left: auto; flex: 0 0 auto; }
+
+.opsboard-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 14px 12px;
+}
+.kpi .v {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 700; font-size: 25px; font-variant-numeric: tabular-nums;
+}
+.kpi .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 3px; }
+.kpi.kpi-warn { border-top-color: var(--bad); }
+.kpi.kpi-warn .v { color: var(--bad); }
+.kpi.kpi-route { border-top-color: var(--c-route); }
+.kpi.kpi-route .v { color: var(--c-route); }
+.kpi.kpi-good { border-top-color: var(--good); }
+.kpi.kpi-good .v { color: var(--good); }
+
+.opsboard-section { margin-bottom: 28px; }
+.opsboard-section h3 { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 14px; margin-bottom: 12px; }
+
+.opsboard-funnel {
+  display: flex; align-items: stretch;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden;
+}
+.funnel-step { flex: 1; min-width: 0; padding: 14px 12px; text-align: center; }
+.funnel-step + .funnel-step { border-left: 1px solid var(--line); }
+.funnel-step .fs-n {
+  font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700;
+  font-size: 20px; font-variant-numeric: tabular-nums;
+}
+.funnel-step .fs-k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.funnel-step .fs-bar {
+  height: 4px; border-radius: 2px; margin-top: 8px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  overflow: hidden;
+}
+.funnel-step .fs-bar span { display: block; height: 100%; background: var(--c-route); }
+.funnel-step.fs-declined .fs-bar span { background: var(--bad); }
+
+.opsboard-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+
+.pending-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 9px; margin-bottom: 6px; font-size: 12.5px;
+  background: color-mix(in srgb, var(--bad) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--line));
+}
+.pending-row .pr-n { font-weight: 700; color: var(--bad); white-space: nowrap; }
+
+.opsboard-predict-line {
+  font-size: 12.5px; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 13px; margin-bottom: 6px;
+}
+.opsboard-predict-line b { color: var(--ink); }
+
+.opsboard-movers { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px; }
+.opsboard-movers-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.opsboard-movers-label.mv-emerging { color: var(--c-emerging); }
+.opsboard-movers-label.mv-cooling { color: var(--c-cooling); }
+.mover-row { margin-bottom: 8px; }
+.mover-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; margin-bottom: 4px; }
+.mover-top .mv-loc { font-weight: 600; }
+.mover-top .mv-val { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mover-bar { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 6%, transparent); overflow: hidden; }
+.mover-bar span { display: block; height: 100%; border-radius: 3px; }
+.mover-bar.mv-emerging span { background: var(--c-emerging); }
+.mover-bar.mv-cooling span { background: var(--c-cooling); }
+
+@media (max-width: 860px) {
+  .opsboard-kpis { grid-template-columns: repeat(2, 1fr); }
+  .opsboard-cols { grid-template-columns: 1fr; }
+  .opsboard-movers { grid-template-columns: 1fr; }
+  .opsboard-funnel { flex-wrap: wrap; }
+  .funnel-step { flex: 1 1 33%; }
+}
+
 /* leaflet chrome */
 .leaflet-control-zoom a {
   background: var(--surface) !important;
@@ -849,6 +988,21 @@ details.model[open] summary { color: var(--ink-2); }
 .reg-form input:focus, .reg-form select:focus {
   outline: none; border-color: var(--c-supplier);
 }
+.addr-autocomplete { position: relative; }
+.addr-suggestions {
+  position: absolute; left: 0; right: 0; top: calc(100% + 3px);
+  z-index: 40;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: var(--shadow);
+  max-height: 220px; overflow-y: auto;
+}
+.addr-suggestion {
+  padding: 8px 10px; font-size: 12px; line-height: 1.35;
+  cursor: pointer; border-bottom: 1px solid var(--line);
+}
+.addr-suggestion:last-child { border-bottom: none; }
+.addr-suggestion:hover, .addr-suggestion.hi { background: var(--surface-2); }
+.addr-suggestion-loading { padding: 8px 10px; font-size: 11.5px; color: var(--muted); }
 .reg-row { display: flex; gap: 8px; }
 .reg-row > div { flex: 1; min-width: 0; }
 .reg-hint { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
@@ -903,6 +1057,12 @@ details.model[open] summary { color: var(--ink-2); }
   font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
 }
 .rc-edit:hover { color: var(--ink); border-color: var(--c-supplier); }
+.rc-remove {
+  padding: 2px 6px; border-radius: 5px; margin-left: 4px;
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+  cursor: pointer; font-family: var(--font-ui); font-size: 12px; line-height: 1;
+}
+.rc-remove:hover { color: #fff; background: var(--bad); border-color: var(--bad); }
 
 /* partners with nothing tonight -- still able to report */
 .quiet-list { padding: 6px 2px 4px; border-top: 1px solid var(--line); margin-top: 8px; }
@@ -920,6 +1080,12 @@ details.model[open] summary { color: var(--ink-2); }
 .quiet-row:hover { border-color: var(--c-supplier); color: var(--ink); }
 .quiet-row .qr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quiet-row .qr-act { margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.qr-remove {
+  padding: 1px 6px; border-radius: 5px;
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+  cursor: pointer; font-family: var(--font-ui); font-size: 12px; line-height: 1.4;
+}
+.qr-remove:hover { color: #fff; background: var(--bad); border-color: var(--bad); }
 
 .foot-restore {
   background: none; border: 0; padding: 0; cursor: pointer;
@@ -941,6 +1107,7 @@ body.ledger-open { overflow: hidden; }
   background: var(--surface);
   border: 2px solid var(--c-agency);
   box-shadow: 0 0 0 1.5px var(--marker-ring);
+  position: relative;
 }
 .lg-dropoff {
   width: 11px; height: 11px; border-radius: 3px; display: inline-block;
@@ -1053,16 +1220,17 @@ body.ledger-open { overflow: hidden; }
 
    Two separate faults were visible here. `grid-template-columns: 1fr auto 1fr`
    forced the brand (89px) and the controls to equal tracks, and the agency
-   view's controls are 621px -- two stats, "Show predicted changes", Ledger,
-   theme -- so they spilled left across the centred nav, with no gap declared
-   to stop them either. Measured: the nav-to-controls gap was 0px at every
-   width from 1512px down, which is "3,136 lbs" flush against "Find food".
+   view's controls are 727px -- two stats, "Show predicted changes",
+   Dashboard, Ledger, theme -- so they spilled left across the centred nav,
+   with no gap declared to stop them either. Measured: the nav-to-controls
+   gap was 0px at every width from 1512px down, which is "3,136 lbs" flush
+   against "Find food".
 
-   The second is that the controls are 621px in the agency view and 427px in
+   The second is that the controls are 727px in the agency view and ~440px in
    the other two, because "Show predicted changes" is agency-only. Any layout
-   that centres the nav in the space LEFT OVER therefore moves it by ~97px when
-   you switch role. Absolute centring is what makes the bar identical on all
-   three pages: the nav is measured against the window, not against its
+   that centres the nav in the space LEFT OVER therefore moves it by ~287px
+   when you switch role. Absolute centring is what makes the bar identical on
+   all three pages: the nav is measured against the window, not against its
    neighbours, so nothing on either side can shift it. */
 .topbar {
   height: 60px;
@@ -1122,24 +1290,27 @@ body.ledger-open { overflow: hidden; }
 }
 /* The nav is pinned to the middle, so the controls have exactly
    (50vw - half the nav - a gap) before they would touch it. The agency view is
-   the widest at 621px and therefore sets the thresholds for all three pages --
-   one rule for every role, so the bar never changes shape when you switch.
-   These two figures are repeated in the panel below, which is what makes them
-   the part that gives way rather than a button.
+   the widest and therefore sets the thresholds for all three pages -- one
+   rule for every role, so the bar never changes shape when you switch. These
+   two figures are repeated in the panel below, which is what makes them the
+   part that gives way rather than a button.
 
    The thresholds are where each variant actually fits, not round numbers:
-   the gap works out at (vw/2 - 145 - controls - 18), so 621px of controls
-   needs 1600 and 500px needs 1358. Setting the first at 1560 left a ~9px
-   band above it, 1561-1569, where both figures still showed and the bar
-   overlapped again by a few pixels -- measured, not theorised.
+   the gap works out at (vw/2 - 145 - controls - 18), so 727px of controls
+   (both stats + forecast + dashboard + ledger + theme) needs 1840 and 607px
+   (one stat) needs 1590, each with a ~24px cushion beyond the exact
+   break-even point -- a fixed cushion is what keeps this from silently
+   going negative again the next time a control is added to .topright, the
+   way it did when the Dashboard button landed after these numbers were
+   first measured -- measured, not theorised.
 
-     >  1600     both figures        (621px of controls)
-     1361-1600   lbs reported only   (500px)
-     <= 1360     neither             (342px, clears down to ~1010) */
-@media (max-width: 1600px) {
+     >  1840     both figures        (727px of controls)
+     1591-1840   lbs reported only   (607px)
+     <= 1590     neither             (448px, clears down to ~1010) */
+@media (max-width: 1840px) {
   .topstats .stat-chip + .stat-chip { display: none; }
 }
-@media (max-width: 1360px) { .topstats { display: none; } }
+@media (max-width: 1590px) { .topstats { display: none; } }
 
 /* a selectable row in the left panel: restaurants, or collectors */
 .offer.pick { cursor: pointer; transition: border-color .14s, background .14s; }

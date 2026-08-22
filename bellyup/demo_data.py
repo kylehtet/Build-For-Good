@@ -103,6 +103,9 @@ CONSTANTS = {
     "HANDLING_MIN": 25,           # load + unload/serve per run
     "MIN_CANDIDATE_NEED": 1.0,    # blocks below this show on the map, never match
     "ACCESS_BOOST_MAX": 0.5,      # reward boost where weekly food access is poor
+    "EMERGING_BOOST": 0.25,       # policy weight: prefer delivering to a block the
+                                  # forecast says is growing (spatial.py + trend)
+    "COOLING_PENALTY": 0.15,      # and prefer it a little less if it's fading
     "AGENCY_CAPACITY_LBS": 2000,  # box truck
     "PANTRY_CAPACITY_LBS": 150,   # pantry van / mobile unit
     "DEMO_DATE": "2026-08-20",    # the fixed demo evening (a 3rd Thursday)

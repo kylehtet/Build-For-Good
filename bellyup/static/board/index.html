@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BellyUp — Surplus Dispatch</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍲</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23eb6834%22/><stop offset=%221%22 stop-color=%22%23d55181%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22url(%23g)%22/><text x=%2250%22 y=%2266%22 font-family=%22system-ui,sans-serif%22 font-weight=%22700%22 font-size=%2246%22 fill=%22white%22 text-anchor=%22middle%22>Bu</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,6 +30,9 @@
     <button class="btn-ledger" id="forecastBtn" title="Overlay the blocks where Gi* + trend predict the cluster verdict will flip, on top of today's map" hidden>
       Show predicted changes
     </button>
+    <button class="btn-ledger" id="dashboardBtn" title="Tonight's operations dashboard">
+      Dashboard
+    </button>
     <button class="btn-ledger" id="ledgerBtn" title="Delivery ledger">
       Ledger <span class="ledger-count" id="ledgerCount">0</span>
     </button>
@@ -51,7 +54,10 @@
     <!-- ===================== public: where are you ==================== -->
     <div class="publicbar" id="publicBar" hidden>
       <label for="pubAddr">Where are you?</label>
-      <input id="pubAddr" placeholder="e.g. 16th &amp; Market, San Diego">
+      <div class="addr-autocomplete">
+        <input id="pubAddr" placeholder="e.g. 16th &amp; Market, San Diego" autocomplete="off">
+        <div class="addr-suggestions" id="pubAddrSuggest" hidden></div>
+      </div>
       <div class="reg-hint" id="pubGeo">Type an address and press Enter.</div>
       <label for="pubRange" style="margin-top:9px">Within</label>
       <select id="pubRange">
@@ -76,7 +82,10 @@
         <input id="regName" placeholder="e.g. Nolita Hall">
 
         <label for="regAddr">Address</label>
-        <input id="regAddr" placeholder="e.g. 2305 India St, San Diego">
+        <div class="addr-autocomplete">
+          <input id="regAddr" placeholder="e.g. 2305 India St, San Diego" autocomplete="off">
+          <div class="addr-suggestions" id="regAddrSuggest" hidden></div>
+        </div>
         <div class="reg-hint" id="regGeo">Type your address and press Enter.</div>
       </div>
 
@@ -205,6 +214,48 @@
         <h3 class="mt">Hotspots served tonight <span class="h-sub">serving limit:
           <span id="limitLabel"></span> deliveries/night</span></h3>
         <div id="ledgerServed"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= operations dashboard overlay ================= -->
+<div class="opsboard" id="dashboard" hidden>
+  <div class="opsboard-inner">
+    <div class="opsboard-head">
+      <div>
+        <h2>Tonight, at a glance</h2>
+        <p class="opsboard-sub">What came in, what's still moving, and what the prediction
+          model expects next &mdash; one screen, nothing to dig through.</p>
+      </div>
+      <button class="btn-ghost" id="dashboardClose">&#10005; Close</button>
+    </div>
+
+    <div class="opsboard-kpis" id="dashTiles"></div>
+
+    <section class="opsboard-section">
+      <h3>Tonight's flow</h3>
+      <div class="opsboard-funnel" id="dashPipeline"></div>
+    </section>
+
+    <div class="opsboard-cols">
+      <section class="opsboard-section">
+        <h3>Waiting on a collector</h3>
+        <div id="dashPending"></div>
+      </section>
+      <section class="opsboard-section">
+        <h3>Where the model sees movement <span class="h-sub">Gi* + trend</span></h3>
+        <div id="dashPredictSummary"></div>
+        <div class="opsboard-movers">
+          <div>
+            <div class="opsboard-movers-label mv-emerging">Fastest emerging</div>
+            <div id="dashEmerging"></div>
+          </div>
+          <div>
+            <div class="opsboard-movers-label mv-cooling">Fastest cooling</div>
+            <div id="dashCooling"></div>
+          </div>
+        </div>
       </section>
     </div>
   </div>

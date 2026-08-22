@@ -84,6 +84,67 @@ def _nominatim(address: str) -> dict | None:
             "matched": hits[0].get("display_name", address), "source": "nominatim"}
 
 
+def suggest(query: str, limit: int = 5) -> list[dict]:
+    """Live autocomplete candidates as someone types an address.
+
+    Unlike lookup(), this asks for several matches, not the best one, and is
+    never cached -- a partial string changes on every keystroke, so a cache
+    keyed on it would only ever grow, never hit. Same rate limit and User-
+    Agent as lookup()'s Nominatim call, since it is the same API and the same
+    usage policy; the client is expected to debounce keystrokes so this
+    still lands well under 1 req/sec in practice.
+    """
+    query = (query or "").strip()
+    if len(query) < 3:
+        return []
+
+    with _lock:
+        wait = 1.05 - (time.time() - _last_nominatim[0])
+        if wait > 0:
+            time.sleep(wait)
+        _last_nominatim[0] = time.time()
+
+    try:
+        r = requests.get(NOMINATIM, params={
+            "q": query, "format": "json", "limit": limit * 2,
+            "viewbox": ",".join(str(x) for x in VIEWBOX), "bounded": 1,
+            "countrycodes": "us",
+        }, headers={"User-Agent": UA}, timeout=6)
+        r.raise_for_status()
+        hits = r.json()
+    except Exception:
+        return []   # a slow or unavailable provider gives no suggestions, not an error
+
+    seen: set[str] = set()
+    out = []
+    for h in hits:
+        label = _short_label(h.get("display_name", query))
+        if label in seen:
+            continue  # two Nominatim hits that collapse to the same short label look
+        seen.add(label)  # like duplicate rows to whoever's picking from the dropdown
+        out.append({"label": label, "lat": round(float(h["lat"]), 6),
+                    "lon": round(float(h["lon"]), 6)})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _short_label(display_name: str) -> str:
+    """Nominatim's display_name is exhaustive -- 'Market Street, East
+    Village, Golden Hill, San Diego, San Diego County, California, 92101,
+    United States' -- and unreadable as a dropdown row. Keep what it is
+    (first segment) plus the actual city, state abbreviation and zip if
+    present -- 'Market Street, San Diego, CA 92101', the same shape as the
+    form's own placeholder text -- rather than a neighbourhood name that
+    means nothing to someone who doesn't already live there."""
+    parts = [p.strip() for p in display_name.split(",")]
+    zip_code = next((p for p in parts if p.isdigit() and len(p) == 5), None)
+    city = "San Diego" if "San Diego" in parts[1:] else (parts[3] if len(parts) > 3 else "")
+    head = [parts[0]] + ([city] if city and city != parts[0] else [])
+    tail = (["CA"] if "California" in parts else []) + ([zip_code] if zip_code else [])
+    return ", ".join(head + tail)
+
+
 def lookup(address: str, region: str = DEFAULT_REGION) -> dict | None:
     """Resolve an address. Returns {lat, lon, matched, source} or None."""
     address = (address or "").strip()

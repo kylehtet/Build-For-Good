@@ -24,6 +24,7 @@ import claims as claims_mod
 import demo_data
 import dispatch
 import geocode as geo
+import routing
 import registry
 
 HERE = Path(__file__).resolve().parent
@@ -336,6 +337,67 @@ def confirm_dispatch(supplier_id: str):
                     "drops": dispatch.LEDGER.drops(hs["id"]),
                     "closed": closed, "closedWhy": why},
         "tonight": dispatch.LEDGER.deliveries,
+    }
+
+
+@app.get("/api/board/dashboard")
+def get_dashboard():
+    """One aggregate view of tonight, for the ops dashboard: pipeline status
+    across every report, the ledger's real totals, and the prediction
+    model's read on the map -- three things a real deployment would need on
+    one screen, none of which existed as a single call before this.
+    """
+    b = board()
+    sups = [s for s in b["suppliers"] if s.get("report")]
+    by_status: dict[str, int] = {}
+    lbs_by_status: dict[str, float] = {}
+    for s in sups:
+        st = _status(s["id"])
+        by_status[st] = by_status.get(st, 0) + 1
+        lbs_by_status[st] = lbs_by_status.get(st, 0) + s["report"]["lbs"]
+
+    deliveries = dispatch.LEDGER.deliveries
+    served_meals = sum(d["servedMeals"] for d in deliveries)
+    net_total = sum(d.get("net", 0) for d in deliveries)
+    fmv_total = sum(d.get("fmv", 0) for d in deliveries)
+
+    hs = b["hotspots"]
+    clusters = [h for h in hs if h.get("giFlag") in ("hot95", "hot99")]
+    by_predict: dict[str, int] = {}
+    for h in clusters:
+        p = h.get("giPredict") or "established"
+        by_predict[p] = by_predict.get(p, 0) + 1
+    top_emerging = sorted((h for h in clusters if h.get("giPredict") == "emerging"),
+                          key=lambda h: -(h.get("giTrend") or 0))[:5]
+    top_cooling = sorted((h for h in clusters if h.get("giPredict") == "cooling"),
+                         key=lambda h: (h.get("giTrend") or 0))[:5]
+    changes = demo_data.forecast_changes()
+
+    pending_by_collector: dict[str, int] = {}
+    for sid, r in claims_mod.REQUESTS.all().items():
+        if r.get("withdrawn") or claims_mod.CLAIMS.holder(sid):
+            continue
+        targets = ([c["id"] for c in dispatch.request_targets(b["agencies"], b["pantries"])]
+                   if r.get("open_to_all") else [r["target"]])
+        for cid in targets:
+            if cid in r.get("declined_by", []):
+                continue
+            pending_by_collector[cid] = pending_by_collector.get(cid, 0) + 1
+
+    return {
+        "reports": {"total": len(sups), "byStatus": by_status, "lbsByStatus":
+                   {k: round(v, 1) for k, v in lbs_by_status.items()}},
+        "ledger": {"deliveries": len(deliveries), "servedMeals": round(served_meals),
+                  "netValue": round(net_total, 2), "fmvTotal": round(fmv_total, 2)},
+        "requests": {"pendingByCollector": pending_by_collector,
+                    "pendingTotal": sum(pending_by_collector.values())},
+        "prediction": {"totalClusters": len(clusters), "byPredict": by_predict,
+                      "topEmerging": [{"id": h["id"], "location": h["location"],
+                                       "trend": h.get("giTrend")} for h in top_emerging],
+                      "topCooling": [{"id": h["id"], "location": h["location"],
+                                      "trend": h.get("giTrend")} for h in top_cooling],
+                      "predictedChanges": len(changes)},
+        "registered": registry.count(),
     }
 
 
@@ -793,6 +855,31 @@ def geocode(address: str = Query(..., min_length=3)):
         raise HTTPException(404, f"Could not find '{address}'. Try adding the "
                                  f"city and ZIP.")
     return hit
+
+
+@app.get("/api/geocode/suggest")
+def geocode_suggest(q: str = Query("", min_length=0)):
+    """Live autocomplete candidates as someone types an address."""
+    return {"suggestions": geo.suggest(q)}
+
+
+@app.get("/api/route")
+def route(points: str = Query(..., min_length=3)):
+    """Real street geometry for a route line, via routing.route_geometry().
+
+    `points` is "lat,lon;lat,lon;..." in visit order, at least 2. This is
+    geometry only -- the distance/cost math dispatch.py uses to decide who
+    matches whom is untouched; this just draws the line a truck would
+    actually have to drive, instead of the straight one used for the
+    estimate.
+    """
+    try:
+        coords = [tuple(float(x) for x in pair.split(",")) for pair in points.split(";")]
+    except ValueError:
+        raise HTTPException(400, "points must be 'lat,lon;lat,lon;...'")
+    if len(coords) < 2:
+        raise HTTPException(400, "need at least two points")
+    return routing.route_geometry(coords)
 
 
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")

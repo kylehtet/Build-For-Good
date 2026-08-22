@@ -47,6 +47,39 @@ def road_mi(a: dict, b: dict) -> float:
     return haversine_mi(a, b) * C["ROAD_FACTOR"]
 
 
+def need_boost(h: dict, cfg: dict) -> float:
+    """Reward multiplier for a hotspot: poor access, plus where the forecast
+    says need is actually headed.
+
+    Two independent, multiplicative reasons to prefer a block. `accessBoost`
+    is unchanged. The second is new: h["giPredict"] (demo_data.load_hotspots(),
+    backed by spatial.py's Gi* and the trend model) classifies every real
+    cluster as emerging, established or cooling. A run delivering to an
+    EMERGING block is reaching need that is measurably growing -- the food
+    lands somewhere that will still need it tomorrow, not just tonight.
+    A COOLING block gets a matching penalty rather than a matching boost,
+    for the same reason in reverse: a block that is a real cluster today but
+    on its way out is worth less as a delivery target than one on its way
+    up, need-for-need.
+
+    This is the one place the prediction layer is allowed to touch a
+    dispatch decision -- explicitly requested, after the earlier decision to
+    keep it display-only. Three call sites use this (compute() and both
+    halves of combine_run's stop scoring) and must move together, or a
+    combined run would score a hotspot differently than the single dispatch
+    that fed it.
+    """
+    access = 1 + cfg["ACCESS_BOOST_MAX"] * (7 - min(h["accessDays"], 7)) / 7
+    predict = h.get("giPredict")
+    if predict == "emerging":
+        forecast = 1 + cfg.get("EMERGING_BOOST", 0.25)
+    elif predict == "cooling":
+        forecast = 1 - cfg.get("COOLING_PENALTY", 0.15)
+    else:
+        forecast = 1.0
+    return access * forecast
+
+
 def run_cost(kind: str, miles: float, minutes: float, cfg: dict | None = None) -> dict:
     """What a run actually costs, in its three real parts.
 
@@ -400,7 +433,7 @@ def compute(supplier: dict, agencies: list[dict], pantries: list[dict],
             fresh = freshness_factor(reported_at, expires_at, arrives)
             served = min(col_meals, room)
             surplus = col_meals - served
-            boost = 1 + C["ACCESS_BOOST_MAX"] * (7 - min(h["accessDays"], 7)) / 7
+            boost = need_boost(h, C)
 
             rc = run_cost(col["kind"], miles, minutes)
             labor, mileage, cost = rc["labor"], rc["mileage"], rc["total"]
@@ -720,7 +753,7 @@ def combine_run(collector: dict, suppliers: list[dict], hotspots: list[dict],
             if room < 1:
                 continue
             detour = leg(at, h)
-            boost = 1 + c["ACCESS_BOOST_MAX"] * (7 - min(h["accessDays"], 7)) / 7
+            boost = need_boost(h, c)
             served = min(remaining_meals, room)
             scored.append((served * c["MEAL_VALUE"] * boost / max(detour, 0.1),
                            served, detour, h))
@@ -733,6 +766,7 @@ def combine_run(collector: dict, suppliers: list[dict], hotspots: list[dict],
                       "meals": round(served, 1),
                       "lbs": round(served * c["LBS_PER_MEAL"], 1),
                       "need": h["need"], "accessDays": h["accessDays"],
+                      "giPredict": h.get("giPredict"),
                       "detourMi": round(detour, 2)})
         remaining_meals -= served
         at = h
@@ -758,7 +792,7 @@ def combine_run(collector: dict, suppliers: list[dict], hotspots: list[dict],
     served_total = sum(x["meals"] for x in stops)
     # (viability is checked below, once the reward is known)
     reward = sum(x["meals"] * c["MEAL_VALUE"]
-                 * (1 + c["ACCESS_BOOST_MAX"] * (7 - min(x["accessDays"], 7)) / 7)
+                 * need_boost(x, c)
                  for x in stops)
     leftover = max(0.0, meals - served_total)
     reward += leftover * c["MEAL_VALUE"] * c["DROPOFF_CREDIT"]

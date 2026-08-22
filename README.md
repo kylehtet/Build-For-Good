@@ -85,6 +85,20 @@ says so, and the map draws those legs faint so they cannot be mistaken for the
 working route. A depot that far out spends most of its miles empty, and a
 closer collector will usually beat it.
 
+### Route lines follow real streets
+
+Every route was a straight line between two points. `bellyup/routing.py`
+asks OSRM (`router.project-osrm.org`, free, no key) for the actual driving
+path and swaps a route's points in once it answers — the straight line
+draws first and stays if OSRM is slow, rate-limited, or unreachable, so a
+flaky public demo server never blocks or breaks the map. This is geometry
+only: `dispatch.py`'s distance/cost math still uses the haversine ×
+`ROAD_FACTOR` estimate it always has, so no dispatch decision depends on a
+live network call. **The public OSRM demo is explicitly not rated for
+production traffic** (their own usage policy) — a real deployment needs a
+self-hosted OSRM instance or a paid routing provider; said here so it is
+not discovered in an outage.
+
 ## The dispatch board
 
 **Left — tonight's reports.** Twenty-four businesses reporting surplus, each
@@ -106,6 +120,14 @@ served on the map.
 **Ledger** (top right). Every confirmed dispatch: tonight's plus the past week.
 Delivery log, donor receipts aggregated for tax records, and which hotspots have
 been served. "Reset tonight" clears the evening; history stays.
+
+**Dashboard** (top right, `GET /api/board/dashboard`). One aggregate view of
+tonight for anyone running the board, not just reading the map: every
+report's stage in the reported → requested → accepted → delivered pipeline,
+which collectors have a request waiting, and the prediction model's current
+read — how many real clusters, the emerging/cooling split, and the fastest
+mover in each direction. Computed server-side, once, from the same `board()`
+every other route reads, so it can never disagree with what the map shows.
 
 **Light / dark** toggle beside it. The choice persists per browser, and the map
 tiles and geometry follow it.
@@ -160,6 +182,13 @@ Requests can be withdrawn until someone accepts. After that the donor's view
 says who is coming and offers nothing to click, because the run is no longer
 theirs to cancel.
 
+**A pending request is red, everywhere a collector might see it** — a
+pulsing dot on its map marker, a badge in the agency picker — because
+"someone needs an answer from you" is a different urgency than any other
+colour already on the board, and it should not have to be discovered by
+opening a run to check. It clears the moment the request is accepted,
+declined, or withdrawn.
+
 ### Restaurants can register themselves
 
 The **"+ Report surplus · new restaurant"** button takes a name and an address
@@ -179,7 +208,7 @@ quantity per partner would make the feed a fixture rather than a report.
 ```
 net    = reward − cost
 
-reward = meals served × $4.25 × accessBoost × freshness
+reward = meals served × $4.25 × accessBoost × forecastBoost × freshness
        + overflow meals × $4.25 × 0.5
 cost   = fuel     miles ÷ mpg × $4.85/gal
        + vehicle  miles × wear/mi
@@ -205,13 +234,20 @@ nine of the fourteen reports go to vans and the five largest go to trucks.
 `1 + 0.5 × (7 − access days/week) / 7`. A block already served daily needs the
 next van less than one served twice a month.
 
-**[Getis-Ord Gi\*](GI_STAR_SPEC.md) is a map and forecast layer, deliberately
-not wired into `reward`.** It answers a real question — is this block's need
-a genuine spatial cluster, or an isolated spike, the same drive with a
-different reach — but the matching algorithm that actually decides who
-collects what stays exactly what shipped on `main`, unmodified. Gi\* and its
-trend-based forecast (below) show up on the map and in the "show predicted
-changes" overlay; they do not change a single dispatch decision.
+**`forecastBoost`** is [Getis-Ord Gi\*](GI_STAR_SPEC.md) plus the trend model
+actually reaching a dispatch decision — `1.25×` if the hotspot is an
+**emerging** cluster (a real cluster today, growing fastest quarter of
+clusters), `0.85×` if it is **cooling** (real today, fading), `1.0×`
+otherwise (`EMERGING_BOOST`/`COOLING_PENALTY` in `CONSTANTS`). The reasoning:
+delivering to a block whose need is measurably growing reaches people who
+will still be there tomorrow, not just tonight; a block on its way out is
+worth a little less, need-for-need, than one on its way up. This was
+originally kept display-only — the paragraph used to say so, in these words
+— and was reinstated deliberately, on request, as the one place the
+prediction layer is allowed to touch matching. `dispatch.need_boost()` is
+the single function both `compute()` and `combine_run()` call, so a combined
+run and the single dispatch that fed it can never disagree on a hotspot's
+score.
 
 Hotspots are scored over the **full 382-block grid**, before the map's
 `need ≥ 0.5` display cut — scoring only the survivors would condition the
@@ -252,13 +288,13 @@ dilutes any one of them enough to matter. 250 m is used because it matches the
 grid's own block scale (§"Two radii" above), not because it gives the most
 flattering count.
 
-Gi\* touches neither **eligibility** nor **preference** in the matching
-algorithm: the candidate filter stays `need ≥ MIN_CANDIDATE_NEED`, and the
-reward formula above is `main`'s, untouched. Park Bl & J St has 23.2 real
-person-equivalents and is not a statistical cluster (z = 1.73) — refusing to
-feed 23 counted people because the block sits alone would be the wrong
-answer, and eligibility is exactly the place that mistake would show up if
-Gi\* were ever wired into it.
+Gi\* still touches only **preference** (`forecastBoost` above), never
+**eligibility** — the candidate filter stays `need ≥ MIN_CANDIDATE_NEED`,
+untouched. Park Bl & J St has 23.2 real person-equivalents and is not a
+statistical cluster (z = 1.73); refusing to feed 23 counted people because
+the block sits alone would be the wrong answer regardless of trend, and
+eligibility is where that mistake would show up. A cooling block still gets
+served — `0.85×` is a smaller reward, not a rejection.
 
 ### Emerging, established, cooling — the one part that IS predictive
 

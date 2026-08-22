@@ -468,10 +468,22 @@
   "asdkjhasd nowhere, san diego, ca": null,
   "bencotto italian kitchen, san diego": null,
   "building 200090 ash road and wire mountain road, oceanside, ca 92058": null,
+  "india st san diego": {
+    "lat": 32.738273,
+    "lon": -117.176851,
+    "matched": "India Street, Five Points, Middletown, Mission Hills, San Diego, San Diego County, California, 92103, United States",
+    "source": "nominatim"
+  },
   "intersection of e 20th st & newell st, national city, ca 91950": {
     "lat": 32.670913,
     "lon": -117.082491,
     "matched": "E 20TH ST & NEWELL ST, NATIONAL CITY, CA, 91950"
+  },
+  "market st san diego": {
+    "lat": 32.711545,
+    "lon": -117.153678,
+    "matched": "Market Street, East Village, Golden Hill, San Diego, San Diego County, California, 92101, United States",
+    "source": "nominatim"
   },
   "nolita hall san diego": {
     "lat": 32.728573,
