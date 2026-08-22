@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BellyUp — food recovery, matched by need</title>
+<meta name="description" content="BellyUp matches restaurant surplus to agencies and the people who need it, using a real spatial-statistics model of where need is concentrated and where it's headed.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%22 stop-color=%22%23eb6834%22/><stop offset=%221%22 stop-color=%22%23d55181%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22url(%23g)%22/><text x=%2250%22 y=%2266%22 font-family=%22system-ui,sans-serif%22 font-weight=%22700%22 font-size=%2246%22 fill=%22white%22 text-anchor=%22middle%22>Bu</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f2f1ed;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --line: rgba(11, 11, 11, 0.12);
+
+  --c-supplier: #eb6834;
+  --c-hotspot: #d55181;
+  --c-agency: #2a78d6;
+  --c-pantry: #4a3aa7;
+  --c-route: #0e8f63;
+  --c-emerging: #c9660a;
+  --c-cooling: #2f7bbf;
+
+  --shadow: 0 10px 30px rgba(11, 11, 11, 0.12);
+  --font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #201f1e;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #8f8d86;
+    --line: rgba(255, 255, 255, 0.10);
+    --c-supplier: #eda100;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #201f1e;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #8f8d86;
+  --line: rgba(255, 255, 255, 0.10);
+  --c-supplier: #eda100;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); }
+body {
+  font: 15px/1.6 var(--font);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+img, svg { display: block; max-width: 100%; }
+
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------------------------------------------------------------- header */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 0;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #eb6834, #d55181);
+  font: 700 14px/1 var(--font); letter-spacing: -.02em;
+}
+.brand-name { font: 600 18px/1 var(--font); letter-spacing: -.01em; }
+.hdr-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 9px;
+  background: var(--ink); color: var(--bg);
+  font: 600 13px/1 var(--font); text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ hero */
+.hero { padding: 64px 0 56px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 600 11px/1 var(--font); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--c-route); background: color-mix(in srgb, var(--c-route) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-route) 30%, transparent);
+  padding: 6px 11px; border-radius: 999px; margin-bottom: 20px;
+}
+.hero h1 {
+  font: 700 clamp(32px, 5.4vw, 56px)/1.08 var(--font);
+  letter-spacing: -.02em; max-width: 15ch;
+}
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(100deg, #eb6834, #d55181);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p {
+  margin-top: 20px; max-width: 56ch;
+  font-size: clamp(15px, 1.8vw, 18px); color: var(--ink-2); line-height: 1.6;
+}
+.hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 22px; border-radius: 10px;
+  background: var(--ink); color: var(--bg);
+  font: 600 14.5px/1 var(--font); text-decoration: none;
+}
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 22px; border-radius: 10px;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line);
+  font: 600 14.5px/1 var(--font); text-decoration: none;
+}
+.btn-secondary:hover { border-color: var(--c-supplier); }
+
+/* --------------------------------------------------------------- roles */
+.roles {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin-top: 56px;
+}
+.role-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 20px;
+}
+.role-num {
+  width: 26px; height: 26px; border-radius: 8px;
+  display: grid; place-items: center;
+  font: 700 12px/1 var(--font); color: #fff;
+  margin-bottom: 14px;
+}
+.role-card h3 { font: 600 15px/1.3 var(--font); margin-bottom: 6px; }
+.role-card p { font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+
+/* ------------------------------------------------------------- sections */
+section.block { padding: 56px 0; border-top: 1px solid var(--line); }
+.block-head { max-width: 62ch; margin-bottom: 32px; }
+.block-head .kicker {
+  font: 600 11px/1 var(--font); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 10px;
+}
+.block-head h2 { font: 700 clamp(22px, 3vw, 30px)/1.2 var(--font); letter-spacing: -.01em; }
+.block-head p { margin-top: 12px; color: var(--ink-2); font-size: 15px; line-height: 1.65; }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px;
+}
+.stat .v { font: 700 30px/1 var(--font); letter-spacing: -.01em; }
+.stat .k { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.feature {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px;
+}
+.feature-ic {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; margin-bottom: 14px;
+  background: var(--surface-2); color: var(--ink);
+}
+.feature h3 { font: 600 15px/1.3 var(--font); margin-bottom: 8px; }
+.feature p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+.feature code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+}
+
+.formula {
+  margin-top: 18px; padding: 16px 18px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.8; color: var(--ink-2); overflow-x: auto;
+}
+.formula b { color: var(--ink); }
+
+.ethics-list { display: grid; gap: 10px; margin-top: 20px; }
+.ethics-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.ethics-item .dot {
+  flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c-hotspot); margin-top: 6px;
+}
+.ethics-item p { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+.ethics-item b { color: var(--ink); }
+
+.stack-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.stack-chip {
+  padding: 7px 13px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line);
+  font: 500 12.5px/1 var(--font); color: var(--ink-2);
+}
+
+.cta-block {
+  text-align: center; padding: 64px 0 72px;
+}
+.cta-block h2 { font: 700 clamp(24px, 4vw, 34px)/1.2 var(--font); letter-spacing: -.01em; }
+.cta-block p { margin: 14px auto 0; max-width: 46ch; color: var(--ink-2); font-size: 15px; }
+.cta-block .hero-ctas { justify-content: center; margin-top: 26px; }
+
+footer {
+  border-top: 1px solid var(--line); padding: 26px 0 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 10px;
+  color: var(--muted); font-size: 12.5px;
+}
+footer a { text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .roles, .stat-row, .feature-grid { grid-template-columns: 1fr; }
+  header { padding: 18px 0; }
+  .hero { padding: 40px 0 40px; }
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <a class="brand" href="/">
+    <span class="brand-mark">Bu</span>
+    <span class="brand-name">BellyUp</span>
+  </a>
+  <a class="hdr-cta" href="/board">Open the live board →</a>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="eyebrow">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      2nd place, hackathon build
+    </span>
+    <h1>The food is thrown away. The need is <em>measured</em>. The matching layer was missing.</h1>
+    <p>BellyUp connects small restaurants with surplus food to the agencies that collect it and
+       the mobile pantries that deliver it — routed by a real spatial-statistics model of where
+       unsheltered need is concentrated tonight, and where it's headed next.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="/board">
+        Open the live board
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <a class="btn-secondary" href="#how-it-works">How it works</a>
+    </div>
+
+    <div class="roles">
+      <div class="role-card">
+        <div class="role-num" style="background:var(--c-supplier)">1</div>
+        <h3>Restaurant reports surplus</h3>
+        <p>A business logs tonight's leftover food in seconds — no account, no liability, an
+           enhanced tax deduction in return.</p>
+      </div>
+      <div class="role-card">
+        <div class="role-num" style="background:var(--c-agency)">2</div>
+        <h3>Agency collects &amp; distributes</h3>
+        <p>The best-matched collector picks up, plans a multi-stop run, and delivers — optimized
+           on cost, need, and where the prediction model says need is growing.</p>
+      </div>
+      <div class="role-card">
+        <div class="role-num" style="background:var(--c-pantry)">3</div>
+        <h3>Someone finds food nearby</h3>
+        <p>The public view surfaces only open pantries within walking distance — never the
+           outreach locations where unsheltered people actually are.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <div class="block-head">
+      <div class="kicker">The problem</div>
+      <h2>The bottleneck isn't supply. It's a matching layer that doesn't exist yet.</h2>
+      <p>The USDA estimates 30–40% of the US food supply goes to waste, while people two blocks
+         from full kitchens go hungry. Meanwhile downtown San Diego's own street count fell
+         24.8% in the year after a 2023 camping ordinance — a number that reads as both fewer
+         people sleeping outside <em>and</em> people whose location simply changed. BellyUp
+         doesn't editorialize that; it routes food to wherever the count says people actually are.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v">30–40%</div><div class="k">of the US food supply is discarded (USDA)</div></div>
+      <div class="stat"><div class="v">196</div><div class="k">small SD restaurants in-scope, none legally required to donate</div></div>
+      <div class="stat"><div class="v">−24.8%</div><div class="k">downtown street count, 12mo before vs. after the 2023 ordinance</div></div>
+    </div>
+  </section>
+
+  <section class="block wrap" id="how-it-works">
+    <div class="block-head">
+      <div class="kicker">The prediction layer</div>
+      <h2>Getis-Ord Gi* tells you where need clusters. A trend model tells you where it's headed.</h2>
+      <p>Most of the map is real, present-tense need — not a forecast. Gi* is a spatial
+         statistic: it tests whether a block's need, combined with its neighbors' within 250m,
+         is a genuine cluster or just noise (z &gt; 1.96, p &lt; 0.05). Only statistically
+         significant clusters ever reach the map — everything else is filtered out as noise,
+         not just dimmed.</p>
+    </div>
+    <div class="formula">
+      G<sub>i</sub>* = (Σw<sub>ij</sub>x<sub>j</sub> − X̄Σw<sub>ij</sub>) / (S·√[(nΣw<sub>ij</sub>² − (Σw<sub>ij</sub>)²)/(n−1)])
+      <br><b>trend</b> = OLS slope over each block's last 5 counts (numpy.polyfit)
+      <br><b>reward</b> = meals × $4.25 × accessBoost × <b>forecastBoost</b> × freshness − cost(fuel, time)
+    </div>
+    <div class="feature-grid" style="margin-top:20px">
+      <div class="feature">
+        <div class="feature-ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg>
+        </div>
+        <h3>Real clusters, not raw counts</h3>
+        <p>A block with 23 people but no statistical cluster (z=1.73) is still fed — Gi*
+           touches <code>preference</code> in the reward, never <code>eligibility</code> in
+           who qualifies. The two questions stay separate on purpose.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="14 6 21 6 21 13"/></svg>
+        </div>
+        <h3>Emerging vs. cooling, forecast forward</h3>
+        <p>Each cluster's trend classifies it emerging (top quartile growth), cooling (bottom
+           quartile), or established — and a p-value-gated area regression cross-checks the
+           finding before it ever reaches the reward.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.5-2V4L9 6m0 14l6-2m-6 2V6m6 12l5.5 2V6L15 4m0 14V4m0 0L9 6"/></svg>
+        </div>
+        <h3>Routed through real streets</h3>
+        <p>Delivery routes draw through actual road geometry via OSRM, not straight lines —
+           with an automatic straight-line fallback if the routing service is ever slow or
+           unreachable, so a flaky public API never breaks the map.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        </div>
+        <h3>One glance, not a spreadsheet</h3>
+        <p>An operations dashboard aggregates tonight's report pipeline, pending requests, and
+           the prediction model's current read — computed once, server-side, so it can never
+           disagree with what the map shows.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <div class="block-head">
+      <div class="kicker">Ethics, unprompted</div>
+      <h2>The map that can't be used to find people.</h2>
+    </div>
+    <div class="ethics-list">
+      <div class="ethics-item"><span class="dot"></span>
+        <p><b>Hotspots are agency-facing only.</b> The restaurant and public views never see
+           outreach locations — only agencies, whose job is distribution, can see where need is.</p>
+      </div>
+      <div class="ethics-item"><span class="dot"></span>
+        <p><b>Block-level aggregation, not addresses.</b> Need is measured and shown per city
+           block, never as an individual's location — the output can't be operationalized to
+           find a specific person.</p>
+      </div>
+      <div class="ethics-item"><span class="dot"></span>
+        <p><b>The pantry finder never claims a site is empty.</b> It says a pantry has no
+           BellyUp deliveries logged today — not that it has no food — because the ledger only
+           knows what this platform routed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap">
+    <div class="block-head">
+      <div class="kicker">Built with</div>
+      <h2>No build step. Real data, real routing, real statistics.</h2>
+      <p>FastAPI backend, vanilla JS + Leaflet frontend, in-memory state — a hackathon-speed
+         stack that still runs a genuine Getis-Ord Gi* implementation and an OLS trend model
+         against a real 382-block San Diego dataset, not a mock.</p>
+    </div>
+    <div class="stack-row">
+      <span class="stack-chip">FastAPI</span>
+      <span class="stack-chip">Python · NumPy / SciPy</span>
+      <span class="stack-chip">Leaflet.js</span>
+      <span class="stack-chip">OSRM routing</span>
+      <span class="stack-chip">Getis-Ord Gi*</span>
+      <span class="stack-chip">OLS trend regression</span>
+      <span class="stack-chip">Nominatim geocoding</span>
+    </div>
+  </section>
+
+  <section class="cta-block wrap">
+    <h2>See it match a restaurant to a collector, live.</h2>
+    <p>Report a surplus, watch the dispatch engine score every viable agency, and see the
+       prediction model's read on tonight's hotspots — all in one board.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="/board">
+        Open the live board
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>BellyUp — a food-recovery matching platform, built for a hackathon.</span>
+  <a href="https://github.com/kylehtet/Build-For-Good" target="_blank" rel="noopener">Source on GitHub</a>
+</footer>
+
+</body>
+</html>

@@ -886,5 +886,10 @@ app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 
 
 @app.get("/")
-def index():
+def landing():
+    return FileResponse(HERE / "static" / "landing" / "index.html")
+
+
+@app.get("/board")
+def board_page():
     return FileResponse(HERE / "static" / "board" / "index.html")

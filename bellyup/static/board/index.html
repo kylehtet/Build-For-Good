@@ -14,7 +14,7 @@
 <body>
 
 <header class="topbar">
-  <a class="brand" href="/">
+  <a class="brand" href="/board">
     <span class="brand-mark">Bu</span>
     <span class="brand-name">BellyUp</span>
   </a>
@@ -28,15 +28,18 @@
   <div class="topright">
     <div class="topstats" id="topstats"></div>
     <button class="btn-ledger" id="forecastBtn" title="Overlay the blocks where Gi* + trend predict the cluster verdict will flip, on top of today's map" hidden>
-      Show predicted changes
+      <svg class="btn-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="14 6 21 6 21 13"/></svg>
+      <span class="btn-label">Show predicted changes</span>
     </button>
     <button class="btn-ledger" id="dashboardBtn" title="Tonight's operations dashboard">
-      Dashboard
+      <svg class="btn-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span class="btn-label">Dashboard</span>
     </button>
     <button class="btn-ledger" id="ledgerBtn" title="Delivery ledger">
-      Ledger <span class="ledger-count" id="ledgerCount">0</span>
+      <svg class="btn-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l3 3v17H6z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      <span class="btn-label">Ledger</span> <span class="ledger-count" id="ledgerCount">0</span>
     </button>
-    <button class="btn-theme" id="themeBtn" title="Light or dark">&#127769;</button>
+    <button class="btn-theme" id="themeBtn" title="Light or dark"></button>
   </div>
 </header>
 

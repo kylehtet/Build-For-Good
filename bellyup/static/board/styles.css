@@ -96,6 +96,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .topactions { display: flex; gap: 8px; align-items: center; }
 .btn-ledger {
+  display: inline-flex; align-items: center; gap: 6px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -105,6 +106,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   white-space: nowrap;
   transition: border-color .15s, background .15s, color .15s;
 }
+.btn-ic { flex: 0 0 auto; }
 .btn-ledger:hover { border-color: var(--c-route); }
 .btn-ledger.on {
   background: color-mix(in srgb, var(--c-emerging) 16%, var(--surface-2));
@@ -148,6 +150,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 .feed-head { padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
 .feed-head h2 { font-family: "Space Grotesk", system-ui, sans-serif; font-size: 15px; font-weight: 600; }
@@ -424,6 +427,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-left: 1px solid var(--line);
   overflow-y: auto;
   min-height: 0;
+  min-width: 0;
 }
 .result-empty { padding: 48px 30px; text-align: center; color: var(--muted); }
 .re-icon { font-size: 34px; margin-bottom: 14px; color: var(--ink-2); }
@@ -1078,7 +1082,7 @@ details.model[open] summary { color: var(--ink-2); }
   cursor: pointer; text-align: left;
 }
 .quiet-row:hover { border-color: var(--c-supplier); color: var(--ink); }
-.quiet-row .qr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quiet-row .qr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quiet-row .qr-act { margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
 .qr-remove {
   padding: 1px 6px; border-radius: 5px;
@@ -1311,6 +1315,33 @@ body.ledger-open { overflow: hidden; }
   .topstats .stat-chip + .stat-chip { display: none; }
 }
 @media (max-width: 1590px) { .topstats { display: none; } }
+
+/* Phones: the absolute-centred nav above assumes 50vw has room either side
+   of it, which stops being true once the viewport itself is narrower than
+   the nav plus the controls -- brand + controls alone need ~570px at full
+   size, more than most phones are wide. Centring cannot be patched with a
+   smaller gap at that point, so the nav drops out of the centred layer
+   entirely and becomes its own full-width row under the icons instead. */
+@media (max-width: 700px) {
+  .topbar { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 8px 10px; }
+  .brand { order: 1; }
+  .topright { order: 2; margin-left: auto; }
+  .roleswitch {
+    position: static; left: auto; top: auto; transform: none;
+    order: 3; width: 100%; display: flex;
+  }
+  .roleswitch button { flex: 1; text-align: center; padding: 8px 6px; }
+  .btn-label { display: none; }
+  .btn-ledger { padding: 8px 10px; }
+
+  /* "Reset tonight" / "Close" wrap mid-word beside a title at this width --
+     giving the actions their own full-width row below reads better than
+     two-line button labels squeezed next to it. */
+  .ledger-head, .opsboard-head { flex-direction: column; }
+  .ledger-head-actions { margin-left: 0; width: 100%; }
+  .ledger-head-actions .btn-ghost { flex: 1; }
+  .opsboard-head .btn-ghost { margin-left: 0; align-self: flex-start; }
+}
 
 /* a selectable row in the left panel: restaurants, or collectors */
 .offer.pick { cursor: pointer; transition: border-color .14s, background .14s; }
